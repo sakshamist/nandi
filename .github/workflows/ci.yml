@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev/ai, dev/platform]
+  pull_request:
+    branches: [main, dev/ai, dev/platform]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nandi?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx next typegen
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run db:validate

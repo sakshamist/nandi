@@ -1,0 +1,746 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  AGENT
+  SUPERVISOR
+  ADMIN
+}
+
+enum CustomerType {
+  INDIVIDUAL
+  DAIRY_FARM
+  COOPERATIVE
+  OTHER
+}
+
+enum LivestockIdStatus {
+  PRESENT
+  ABSENT
+  UNKNOWN
+  NOT_APPLICABLE
+}
+
+enum ReferralDecision {
+  INTERESTED
+  NOT_INTERESTED
+  UNDECIDED
+}
+
+enum ReferralStatus {
+  PENDING
+  HANDOFF_COMPLETED
+  APPOINTMENT_SCHEDULED
+  TAGGED
+  CANCELLED
+}
+
+enum ChecklistItemStatus {
+  REQUIRED
+  CONDITIONAL
+  OPTIONAL
+  COMPLETED
+  WAIVED
+  BLOCKED
+}
+
+enum EvidenceCategory {
+  ANIMAL_FULL_BODY_PHOTO
+  EAR_TAG_PHOTO
+  ANIMAL_WITH_OWNER_PHOTO
+  VETERINARY_HEALTH_CERTIFICATE
+  KYC_IDENTITY_PROOF
+  KYC_ADDRESS_PROOF
+  OWNERSHIP_PROOF
+  OTHER
+}
+
+enum ValidationStatus {
+  PENDING
+  PASS
+  FAIL
+  NEEDS_REVIEW
+}
+
+enum ApplicationState {
+  PROFILE_INCOMPLETE
+  AWAITING_TAGGING_INSPECTION
+  READY_FOR_SUBMISSION
+  SUBMITTED
+  UNDERWRITING_REVIEW
+  ISSUED
+  REJECTED
+}
+
+enum SubmissionMode {
+  API
+  PORTAL_HANDOFF
+  MANUAL_HANDOFF
+}
+
+enum FactVerificationState {
+  UNVERIFIED
+  AGENT_CONFIRMED
+  EXTERNALLY_VERIFIED
+  REJECTED
+}
+
+enum EvidenceRefType {
+  PHOTO
+  DOCUMENT
+}
+
+enum RecommendationOutcomeStatus {
+  SELECTED
+  OPTED_OUT
+  EXPIRED
+}
+
+model Agent {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String
+  phone         String
+  role          Role     @default(AGENT)
+  territoryCode String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  interactions       Interaction[]
+  applications       Application[]
+  auditEvents        AuditEvent[]
+  recommendationRuns RecommendationRun[]
+  reviewedPhotos     PhotoEvidence[]              @relation("PhotoReviewedBy")
+  reviewedDocuments  Document[]                   @relation("DocumentReviewedBy")
+  reviewLogs         ReviewLog[]
+  stateTransitions   ApplicationStateTransition[]
+}
+
+model Customer {
+  id                String       @id @default(uuid())
+  fullName          String
+  primaryPhone      String
+  village           String?
+  district          String?
+  state             String?
+  preferredLanguage String       @default("hi")
+  customerType      CustomerType @default(INDIVIDUAL)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  interactions     Interaction[]
+  livestockRecords LivestockRecord[]
+  organisations    OrganisationMember[]
+  applications     Application[]
+  documents        Document[]
+  crmCases         CrmCase[]
+  referrals        IdReferral[]
+  profileFacts     ProfileFact[]
+  batchItems       BatchItemStub[]
+
+  @@index([primaryPhone])
+}
+
+model Organisation {
+  id                 String       @id @default(uuid())
+  name               String
+  organisationType   CustomerType @default(COOPERATIVE)
+  registrationNumber String?      @unique
+  contactPhone       String
+  village            String?
+  district           String?
+  state              String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  members          OrganisationMember[]
+  livestockRecords LivestockRecord[]
+  applications     Application[]
+  bulkBatches      BulkBatch[]
+}
+
+model OrganisationMember {
+  id                 String   @id @default(uuid())
+  organisationId     String
+  customerId         String
+  roleInOrganisation String   @default("MEMBER")
+  joinedAt           DateTime @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([organisationId, customerId])
+}
+
+model LivestockRecord {
+  id                  String   @id @default(uuid())
+  customerId          String?
+  organisationId      String?
+  species             String   @default("CATTLE")
+  breed               String?
+  ageMonths           Int?
+  dentitionCount      Int?
+  currentMilkYieldLpd Float?
+  estimatedValue      Float?
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  customer     Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  organisation Organisation?        @relation(fields: [organisationId], references: [id], onDelete: SetNull)
+  identifier   LivestockIdentifier?
+  photos       PhotoEvidence[]
+  applications Application[]
+  batchItems   BatchItemStub[]
+}
+
+model LivestockIdentifier {
+  id                String                @id @default(uuid())
+  livestockRecordId String                @unique
+  idStatus          LivestockIdStatus     @default(UNKNOWN)
+  tagNumber         String?
+  tagType           String?               @default("VISUAL_EAR_TAG")
+  issuer            String?               @default("INAPH")
+  verificationState FactVerificationState @default(UNVERIFIED)
+  verifiedAt        DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  livestockRecord LivestockRecord @relation(fields: [livestockRecordId], references: [id], onDelete: Cascade)
+  referrals       IdReferral[]
+  photos          PhotoEvidence[]
+}
+
+model Institute {
+  id                 String   @id @default(uuid())
+  name               String
+  instituteType      String   @default("GOVERNMENT_VETERINARY_DISPENSARY")
+  contactPerson      String?
+  contactPhone       String
+  email              String?
+  district           String
+  state              String
+  serviceAreaSummary String?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  referrals IdReferral[]
+}
+
+model IdReferral {
+  id                      String           @id @default(uuid())
+  interactionId           String
+  customerId              String?
+  provisionalCustomerName String?
+  livestockIdentifierId   String
+  instituteId             String?
+  idempotencyKey          String           @unique
+  decision                ReferralDecision @default(UNDECIDED)
+  status                  ReferralStatus   @default(PENDING)
+  notes                   String?
+  handoffTimestamp        DateTime?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  interaction         Interaction         @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  customer            Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  livestockIdentifier LivestockIdentifier @relation(fields: [livestockIdentifierId], references: [id], onDelete: Cascade)
+  institute           Institute?          @relation(fields: [instituteId], references: [id], onDelete: SetNull)
+}
+
+model Interaction {
+  id             String         @id @default(uuid())
+  agentId        String
+  customerId     String?
+  status         String         @default("ACTIVE")
+  currentStage   String         @default("STARTED")
+  referralStatus ReferralStatus @default(PENDING)
+  clientDraftKey String?        @unique
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  agent              Agent               @relation(fields: [agentId], references: [id])
+  customer           Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  turns              ConversationTurn[]
+  profileFacts       ProfileFact[]
+  referrals          IdReferral[]
+  recommendationRuns RecommendationRun[]
+  policySelections   PolicySelection[]
+  applications       Application[]
+  auditEvents        AuditEvent[]
+}
+
+model ConversationTurn {
+  id            String   @id @default(uuid())
+  interactionId String
+  turnOrder     Int
+  speaker       String // "AGENT", "CUSTOMER", "SYSTEM"
+  messageText   String
+  languageCode  String   @default("hi")
+  metadataJson  String?
+  createdAt     DateTime @default(now())
+
+  interaction Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+
+  @@unique([interactionId, turnOrder])
+}
+
+model ProfileFact {
+  id                String                @id @default(uuid())
+  interactionId     String
+  customerId        String?
+  entityType        String // "CUSTOMER", "LIVESTOCK", "ORGANISATION"
+  attributeKey      String
+  proposedValue     String
+  confidence        Float                 @default(1.0)
+  sourceEvidence    String?
+  verificationState FactVerificationState @default(UNVERIFIED)
+  confirmedByAgent  Boolean               @default(false)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  interaction Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  customer    Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+}
+
+model InsuranceProduct {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  insurerName     String
+  version         Int      @default(1)
+  active          Boolean  @default(true)
+  description     String?
+  minAgeMonths    Int      @default(12)
+  maxAgeMonths    Int      @default(144)
+  basePremiumRate Float    @default(0.04) // 4%
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rules                  ProductRule[]
+  insurerConstraints     InsurerConstraint[]
+  ruleVersions           RuleVersion[]
+  checklistTemplates     ChecklistTemplate[]
+  policySelections       PolicySelection[]
+  recommendationOutcomes RecommendationOutcome[]
+  applications           Application[]
+}
+
+model ProductRule {
+  id             String   @id @default(uuid())
+  productId      String
+  ruleType       String   @default("ELIGIBILITY")
+  ruleKey        String
+  conditionsJson String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model InsurerConstraint {
+  id                             String    @id @default(uuid())
+  productId                      String
+  version                        Int       @default(1)
+  requiresTagForSubmission       Boolean   @default(false)
+  allowsPendingTaggingInspection Boolean   @default(true)
+  requiresTagForIssuance         Boolean   @default(true)
+  requiresVhc                    Boolean   @default(true)
+  vhcRequirementsJson            String?
+  effectiveFrom                  DateTime  @default(now())
+  effectiveTo                    DateTime?
+  createdAt                      DateTime  @default(now())
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, version])
+}
+
+model RecommendationRun {
+  id                    String   @id @default(uuid())
+  interactionId         String
+  agentId               String
+  inputContextJson      String
+  candidatePoliciesJson String
+  rationaleSummary      String?
+  createdAt             DateTime @default(now())
+
+  interaction      Interaction             @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  agent            Agent                   @relation(fields: [agentId], references: [id])
+  policySelections PolicySelection[]
+  outcomes         RecommendationOutcome[]
+}
+
+model RecommendationOutcome {
+  id                  String                      @id @default(uuid())
+  recommendationRunId String
+  productId           String
+  status              RecommendationOutcomeStatus @default(SELECTED)
+  selectedAt          DateTime?
+  notes               String?
+  createdAt           DateTime                    @default(now())
+
+  recommendationRun RecommendationRun @relation(fields: [recommendationRunId], references: [id], onDelete: Cascade)
+  product           InsuranceProduct  @relation(fields: [productId], references: [id])
+
+  @@unique([recommendationRunId, productId])
+}
+
+model PolicySelection {
+  id                  String   @id @default(uuid())
+  recommendationRunId String?
+  interactionId       String
+  productId           String
+  selectedAt          DateTime @default(now())
+  agentConfirmed      Boolean  @default(true)
+  notes               String?
+
+  recommendationRun RecommendationRun? @relation(fields: [recommendationRunId], references: [id], onDelete: SetNull)
+  interaction       Interaction        @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  product           InsuranceProduct   @relation(fields: [productId], references: [id])
+  checklistInstance ChecklistInstance?
+  application       Application?
+}
+
+model ChecklistTemplate {
+  id              String   @id @default(uuid())
+  productId       String
+  version         Int      @default(1)
+  title           String
+  itemsConfigJson String
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product   InsuranceProduct    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  instances ChecklistInstance[]
+}
+
+model ChecklistInstance {
+  id                String   @id @default(uuid())
+  policySelectionId String   @unique
+  applicationId     String?
+  templateId        String?
+  version           Int      @default(1)
+  isComplete        Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  policySelection PolicySelection    @relation(fields: [policySelectionId], references: [id], onDelete: Cascade)
+  application     Application?       @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  template        ChecklistTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  items           ChecklistItem[]
+}
+
+model ChecklistItem {
+  id                    String              @id @default(uuid())
+  checklistInstanceId   String
+  code                  String
+  title                 String
+  description           String?
+  category              EvidenceCategory
+  status                ChecklistItemStatus @default(REQUIRED)
+  requiredForSubmission Boolean             @default(true)
+  requiredForIssuance   Boolean             @default(true)
+  evidenceId            String?
+  evidenceRefType       EvidenceRefType?
+  reasonCode            String?
+  notes                 String?
+  completedAt           DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  checklistInstance ChecklistInstance @relation(fields: [checklistInstanceId], references: [id], onDelete: Cascade)
+
+  @@unique([checklistInstanceId, code])
+}
+
+model PhotoEvidence {
+  id                    String           @id @default(uuid())
+  idempotencyKey        String           @unique
+  livestockRecordId     String?
+  livestockIdentifierId String?
+  category              EvidenceCategory
+  storageUri            String
+  thumbnailUri          String?
+  mimeType              String           @default("image/jpeg")
+  fileSizeBytes         Int?
+  timestamp             DateTime         @default(now())
+  latitude              Float?
+  longitude             Float?
+  hasGeoConsent         Boolean          @default(false)
+  qualityScore          Float?
+  tagNumberDetected     String?
+  validationStatus      ValidationStatus @default(PENDING)
+  validationNotes       String?
+  reviewerNotes         String?
+  reviewedByAgentId     String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  livestockRecord     LivestockRecord?     @relation(fields: [livestockRecordId], references: [id], onDelete: SetNull)
+  livestockIdentifier LivestockIdentifier? @relation(fields: [livestockIdentifierId], references: [id], onDelete: SetNull)
+  reviewedBy          Agent?               @relation("PhotoReviewedBy", fields: [reviewedByAgentId], references: [id], onDelete: SetNull)
+  captureMetadata     CaptureMetadata?
+  validations         ValidationResult[]
+}
+
+model Document {
+  id                String           @id @default(uuid())
+  idempotencyKey    String           @unique
+  customerId        String?
+  category          EvidenceCategory
+  title             String
+  storageUri        String
+  mimeType          String           @default("application/pdf")
+  fileSizeBytes     Int?
+  extractedDataJson String?
+  validationStatus  ValidationStatus @default(PENDING)
+  validationNotes   String?
+  hasUploadConsent  Boolean          @default(false)
+  reviewedByAgentId String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  customer    Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  reviewedBy  Agent?             @relation("DocumentReviewedBy", fields: [reviewedByAgentId], references: [id], onDelete: SetNull)
+  validations ValidationResult[]
+}
+
+model Application {
+  id                   String           @id @default(uuid())
+  interactionId        String?
+  agentId              String
+  customerId           String?
+  organisationId       String?
+  livestockRecordId    String?
+  productId            String
+  policySelectionId    String           @unique
+  state                ApplicationState @default(PROFILE_INCOMPLETE)
+  submissionEligible   Boolean          @default(false)
+  issuanceEligible     Boolean          @default(false)
+  submissionMode       SubmissionMode   @default(MANUAL_HANDOFF)
+  externalPolicyNumber String?
+  externalReferenceId  String?
+  submittedAt          DateTime?
+  issuedAt             DateTime?
+  rejectedAt           DateTime?
+  rejectionReason      String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  agent              Agent                        @relation(fields: [agentId], references: [id])
+  customer           Customer?                    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  organisation       Organisation?                @relation(fields: [organisationId], references: [id], onDelete: SetNull)
+  livestockRecord    LivestockRecord?             @relation(fields: [livestockRecordId], references: [id], onDelete: SetNull)
+  product            InsuranceProduct             @relation(fields: [productId], references: [id])
+  policySelection    PolicySelection              @relation(fields: [policySelectionId], references: [id], onDelete: Cascade)
+  interaction        Interaction?                 @relation(fields: [interactionId], references: [id], onDelete: SetNull)
+  submissionAttempts SubmissionAttempt[]
+  checklistInstances ChecklistInstance[]
+  stateTransitions   ApplicationStateTransition[]
+  issuances          PolicyIssuance[]
+  crmCases           CrmCase[]
+}
+
+model SubmissionAttempt {
+  id                  String         @id @default(uuid())
+  applicationId       String
+  attemptNumber       Int            @default(1)
+  submissionMode      SubmissionMode @default(MANUAL_HANDOFF)
+  idempotencyKey      String         @unique
+  requestPayloadJson  String
+  responsePayloadJson String?
+  success             Boolean        @default(false)
+  errorMessage        String?
+  createdAt           DateTime       @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model BulkBatch {
+  id               String   @id @default(uuid())
+  organisationId   String
+  batchName        String
+  totalRecords     Int      @default(0)
+  processedRecords Int      @default(0)
+  status           String   @default("STUB_NOT_IMPLEMENTED")
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organisation Organisation    @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  items        BatchItemStub[]
+}
+
+model CrmCase {
+  id            String    @id @default(uuid())
+  customerId    String
+  applicationId String?
+  caseType      String    @default("FOLLOW_UP") // "FOLLOW_UP", "RENEWAL", "CLAIM"
+  status        String    @default("OPEN")
+  title         String
+  description   String?
+  followUpDate  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  customer    Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  application Application?    @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  claimStubs  ClaimCaseStub[]
+}
+
+model AuditEvent {
+  id              String   @id @default(uuid())
+  actorId         String?
+  actorType       String   @default("AGENT") // "AGENT", "SYSTEM", "ADMIN"
+  action          String
+  entityType      String
+  entityId        String
+  beforeStateJson String?
+  afterStateJson  String?
+  metadataJson    String?
+  ipAddress       String?
+  interactionId   String?
+  createdAt       DateTime @default(now())
+
+  agent       Agent?       @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  interaction Interaction? @relation(fields: [interactionId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+}
+
+model PromptMetadata {
+  id            String             @id @default(uuid())
+  promptKey     String
+  promptVersion String
+  modelVersion  String
+  provider      String
+  metadataJson  String?
+  createdAt     DateTime           @default(now())
+  validations   ValidationResult[]
+
+  @@unique([promptKey, promptVersion])
+}
+
+model ValidationResult {
+  id               String           @id @default(uuid())
+  photoId          String?
+  documentId       String?
+  evidenceRefType  EvidenceRefType
+  evidenceId       String
+  status           ValidationStatus @default(PENDING)
+  reasonCodesJson  String?
+  confidenceBand   String?
+  deterministic    Boolean          @default(false)
+  promptMetadataId String?
+  createdAt        DateTime         @default(now())
+
+  photo          PhotoEvidence?  @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  document       Document?       @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  promptMetadata PromptMetadata? @relation(fields: [promptMetadataId], references: [id], onDelete: SetNull)
+
+  @@index([evidenceRefType, evidenceId])
+}
+
+model ReviewLog {
+  id              String          @id @default(uuid())
+  evidenceRefType EvidenceRefType
+  evidenceId      String
+  actorId         String
+  decision        String
+  notes           String?
+  createdAt       DateTime        @default(now())
+
+  actor Agent @relation(fields: [actorId], references: [id])
+}
+
+model ApplicationStateTransition {
+  id            String            @id @default(uuid())
+  applicationId String
+  fromState     ApplicationState?
+  toState       ApplicationState
+  actorId       String?
+  reasonCode    String?
+  createdAt     DateTime          @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actor       Agent?      @relation(fields: [actorId], references: [id], onDelete: SetNull)
+}
+
+model PolicyIssuance {
+  id               String   @id @default(uuid())
+  applicationId    String   @unique
+  insurerReference String?
+  policyNumber     String
+  payloadJson      String?
+  issuedAt         DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model BatchItemStub {
+  id                String   @id @default(uuid())
+  batchId           String
+  customerId        String?
+  livestockRecordId String?
+  status            String   @default("STUB_NOT_IMPLEMENTED")
+  notes             String?
+  createdAt         DateTime @default(now())
+
+  batch           BulkBatch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  customer        Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  livestockRecord LivestockRecord? @relation(fields: [livestockRecordId], references: [id], onDelete: SetNull)
+}
+
+model ClaimCaseStub {
+  id        String   @id @default(uuid())
+  crmCaseId String
+  reference String
+  status    String   @default("NOT_IMPLEMENTED")
+  notes     String?
+  createdAt DateTime @default(now())
+
+  crmCase CrmCase @relation(fields: [crmCaseId], references: [id], onDelete: Cascade)
+}
+
+model AdminConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  valueJson String
+  updatedAt DateTime @updatedAt
+}
+
+model RuleVersion {
+  id            String   @id @default(uuid())
+  productId     String
+  version       Int
+  rulesJson     String
+  effectiveFrom DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, version])
+}
+
+model CaptureMetadata {
+  id              String   @id @default(uuid())
+  photoEvidenceId String   @unique
+  capturedAt      DateTime @default(now())
+  deviceInfo      String?
+  latitude        Float?
+  longitude       Float?
+  hasGeoConsent   Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  photoEvidence PhotoEvidence @relation(fields: [photoEvidenceId], references: [id], onDelete: Cascade)
+}

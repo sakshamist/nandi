@@ -101,13 +101,47 @@ Modules communicate through typed public interfaces. Separate deployments or mic
 The `nandi` repository is a clean slate. The foundational stack will be bootstrapped directly here:
 
 - **Web application & API:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS
-- **Primary data store:** PostgreSQL managed through Prisma ORM (compatible with Neon / standard Postgres)
+- **Primary data store:** PostgreSQL managed through Prisma ORM; the pilot target is Cloud SQL for PostgreSQL
 - **Client storage & offline resilience:** Service Worker and IndexedDB for resumable field drafts, interaction state, and queued uploads (sensitive PII and documents are excluded from unencrypted `localStorage`)
 - **Semantic retrieval:** Qdrant vector database for product knowledge and guideline retrieval
-- **LLM / inference gateway:** Modular gateway routing to local Ollama or hosted providers (e.g. Gemini, OpenAI) with prompt/model provenance tracking
+- **LLM / inference gateway:** Mock-first gateway with prompt/model provenance tracking; optional Gemini on Vertex AI only when explicitly enabled with separate quota/billing
 - **Authentication:** Standard session/token-based authentication supporting role-based access for field agents, supervisors, and admins
 
 *(Note: If migrating components from a prior SureLM prototype in the future, that will be executed as a controlled code import against these module interfaces.)*
+
+### GCP pilot deployment baseline
+
+The current deployment target is the GCP project `project-nandi` funded by a **$5 credit**. This budget supports a short demo/pilot only. It does not support a sustained production deployment.
+
+| Capability | Pilot choice | Budget rule |
+|---|---|---|
+| Web/API runtime | Next.js modular monolith on Cloud Run, `us-central1`, min instances `0` | Request-based billing only; no GPU, no min instances, no always-on worker |
+| Relational database | Cloud SQL for PostgreSQL free-trial instance | 30-day limit, one per project, no SLA or backups; delete or upgrade before expiry |
+| Vector database | Qdrant Cloud Free | 1 node, 0.5 vCPU, 1 GB RAM, 4 GB disk; reactivate weekly to avoid suspension |
+| Object storage | Private Google Cloud Storage (GCS) Standard bucket in `us-central1` | Signed URLs, lifecycle cleanup for test assets, no bucket versioning |
+| AI inference | Mock fixtures by default; optional Gemini on Vertex AI | Keep `FEATURE_AI_EXPLANATIONS=false` and `FEATURE_AI_EVIDENCE=false`; do not assume the $5 credit covers Gemini/Vertex |
+| Secrets | Secret Manager plus least-privilege Cloud Run service account | No secrets in source or images |
+| Observability | Cloud Logging, Cloud Monitoring, and a budget alert | Keep app-level `AuditEvent` canonical; no external APM/SIEM |
+
+**Pilot cost guardrails:**
+
+- Keep PostgreSQL, Cloud Run, and GCS in the same region to avoid cross-region data transfer.
+- Do not enable Cloud SQL HA, replicas, backups, or a paid instance during the credit-funded pilot.
+- Do not run local GPU inference, Qdrant Standard, or high-volume Gemini calls.
+- Keep insurer submission in `MANUAL_HANDOFF` and keep CRM/bulk-validation features as labelled stubs.
+- Keep AI feature flags off for demonstrations that must fit the credit; use the frozen mocks in `src/contracts/mocks/`.
+- Set a budget alert before expiry and delete the Cloud SQL free-trial instance when the pilot ends.
+
+**Not covered by the $5 credit:** sustained Cloud SQL, HA/backup configurations, Gemini/Vertex usage relying on credit, Qdrant Standard/Premium, always-on VMs or workers, GPU inference, large GCS retention, external monitoring stacks, and production insurer/CRM integrations.
+
+**Pilot teardown checklist:**
+
+1. Export any demo records that must be retained.
+2. Delete the Cloud SQL free-trial instance before its 30-day expiry or upgrade it explicitly.
+3. Delete the Cloud Run service and Artifact Registry image after the demo.
+4. Delete the GCS bucket after confirming no retained signed URLs are needed.
+5. Remove Secret Manager secrets and disable the service account.
+6. Reactivate or delete the Qdrant free cluster before its inactivity deadline.
 
 ### Logical component view
 
@@ -128,7 +162,7 @@ flowchart TD
     E --> N[Institute Referral Directory]
     O[Admin: Products, Rules, Checklists] --> F
     O --> I
-    P[Audit & Observability] --- B
+    P[AuditEvent, Cloud Logging & Monitoring] --- B
     P --- G
     P --- J
 ```
@@ -304,7 +338,7 @@ Each module owns its business logic and database models. Cross-module calls use 
 **Purpose:** Securely collect, process, and validate required documents, photos, and medical certificates.
 
 **Responsibilities:**
-- Upload and store files in secure private object storage (e.g. S3/GCS or local encrypted blob equivalent)
+- Upload and store files in a private GCS bucket with signed URLs and lifecycle cleanup for pilot data
 - **Mandatory photographic capture:**
   - Full-body side profile of the animal
   - High-resolution, readable close-up of the ear tag / RFID
@@ -364,9 +398,9 @@ Each module owns its business logic and database models. Cross-module calls use 
 - Maintain insurer catalogues, rule versions, checklist templates, and institute directories
 - Record comprehensive audit logs for all agent actions, AI suggestions, human overrides, and status transitions
 - Track model/prompt versions, extraction confidence scores, and raw evidence references
-- Provide supervisor review dashboards
+- Provide supervisor review dashboards backed by Cloud Logging and Cloud Monitoring
 
-**Owns:** AdminConfig, RuleVersion, PromptMetadata, and AuditLog records.
+**Owns:** AdminConfig, RuleVersion, PromptMetadata, and AuditEvent records.
 
 ---
 
@@ -494,7 +528,7 @@ Low-confidence extractions must never be silently promoted to confirmed facts wi
 - **Consent and geolocation:**
   - Explicit customer consent is recorded before capturing geolocation coordinates or uploading personal documents.
   - GPS metadata is strictly bound to photo evidence for underwriting verification and excluded from public payloads.
-- **Data storage encryption:** All documents and photographic assets are stored in private, encrypted object storage with time-limited signed URLs.
+- **Data storage encryption:** All documents and photographic assets are stored in a private, encrypted GCS bucket with time-limited signed URLs.
 - **Auditability & immutability:** Every state transition in the application state machine is logged in `AuditEvent` with timestamp, actor, and before/after states.
 - **Idempotency:** All submission, upload, and referral APIs implement idempotency keys to ensure safe retries over unstable field networks.
 
@@ -510,7 +544,7 @@ The sprint plan establishes a clean-slate bootstrap in `nandi` and delivers work
 
 **Work:**
 - Bootstrap Next.js 16 (App Router), React 19, TypeScript, and Tailwind CSS.
-- Set up Prisma with PostgreSQL (Neon-ready schema).
+- Set up Prisma with PostgreSQL for Cloud SQL (standard Postgres schema).
 - Create the modular directory structure under `src/modules/` (`workspace`, `interaction`, `profile`, `id-referral`, `catalogue`, `recommendation`, `checklist`, `documents`, `application`, `stubs`).
 - Define shared domain types, application state enums, and module service interfaces.
 - Create seed data for agents, sample customers, livestock breeds, product rules, and tagging institutes.
