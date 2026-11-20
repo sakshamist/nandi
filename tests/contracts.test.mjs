@@ -22,7 +22,16 @@ test("operations use canonical names and handoff seams", () => {
   assert.match(source, /confirmProfileFact:/);
   assert.match(source, /recordQualityResult:/);
   assert.match(source, /attachRecommendationRationale:/);
+  assert.match(source, /idStatus\?: LivestockIdStatus/);
+  assert.match(source, /referralDecision\?: ReferralDecision/);
   assert.doesNotMatch(source, /\bsyncDraft:/);
+});
+
+test("referral decision is a canonical contract enum", () => {
+  const source = read("src/contracts/enums.ts");
+  assert.match(source, /export const ReferralDecision = \{/);
+  assert.match(source, /Accepted: "accepted"/);
+  assert.match(source, /Declined: "declined"/);
 });
 
 test("rule contract normalizes conflicting insurer flags", () => {
