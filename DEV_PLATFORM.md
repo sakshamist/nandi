@@ -345,7 +345,7 @@ Consume these mocks from Developer 1:
 ## 8. Git & integration workflow
 
 - `main` holds the contract freeze and sprint integration merges.
-- Work from `dev/platform`; task branches `dev/platform/*` merge back into `dev/platform` via PR.
+- Work from `dev/platform`; task branches `platform/*` merge back into `dev/platform` via PR.
 - Rebase/merge `main` into `dev/platform` daily; open integration PRs to `main` at each sprint boundary.
 - Cross-stream changes require a contract change PR to `main` first, then both workstreams pick it up.
 - You own the feature-flag registry; consume the flag names declared by Developer 1 in `@/contracts` so platform flows stay testable if inference is not ready.

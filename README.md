@@ -56,7 +56,7 @@ Pilot teardown: export required demo records, delete the Cloud SQL instance, Clo
 
 ## Branches
 
-`main` carries the frozen contracts and integration merges. Work from `dev/ai` and `dev/platform`; task branches use `dev/ai/*` and `dev/platform/*`. Contract changes land on `main` first.
+`main` carries the frozen contracts and integration merges. Work from `dev/ai` and `dev/platform`; task branches use `ai/*` and `platform/*`. Contract changes land on `main` first.
 
 ## CI
 

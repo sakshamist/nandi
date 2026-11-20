@@ -300,7 +300,7 @@ Consume these mocks from Developer 2:
 ## 8. Git & integration workflow
 
 - `main` holds the contract freeze and sprint integration merges.
-- Work from `dev/ai`; task branches `dev/ai/*` merge back into `dev/ai` via PR.
+- Work from `dev/ai`; task branches `ai/*` merge back into `dev/ai` via PR.
 - Rebase/merge `main` into `dev/ai` daily; open integration PRs to `main` at each sprint boundary.
 - Cross-stream changes require a contract change PR to `main` first, then both workstreams pick it up.
 - Developer 2 owns the feature-flag registry; you declare required flag names in `@/contracts` before Sprint 2.
