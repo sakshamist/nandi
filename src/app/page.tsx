@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ReferralStatus from "@/components/referral-status";
 import { drafts, isOnline, subscribeOffline } from "@/modules/workspace";
 
 const SECTIONS = [
@@ -45,6 +46,9 @@ export default function WorkspaceShell() {
             Drafts saved locally: <span className="font-medium">{pendingDrafts}</span>
           </p>
         )}
+        <div className="min-h-7">
+          <ReferralStatus />
+        </div>
       </header>
 
       {offline && (
