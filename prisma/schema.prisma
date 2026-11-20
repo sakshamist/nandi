@@ -744,3 +744,32 @@ model CaptureMetadata {
 
   photoEvidence PhotoEvidence @relation(fields: [photoEvidenceId], references: [id], onDelete: Cascade)
 }
+
+
+model KnowledgeDocument {
+  id            String   @id @default(uuid())
+  source        String
+  title         String?
+  contentHash   String
+  metadataJson  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  chunks        KnowledgeChunk[]
+
+  @@unique([source, contentHash])
+}
+
+model KnowledgeChunk {
+  id            String   @id @default(uuid())
+  documentId    String
+  chunkIndex    Int
+  heading       String
+  text          String
+  contentHash   String
+  createdAt     DateTime @default(now())
+
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex, contentHash])
+  @@index([documentId])
+}
