@@ -1,5 +1,7 @@
+import { ExplanationCard } from "@/components/ai/explanation-card";
 import { CustomerType } from "@/contracts/enums";
 import type { RecommendationContext } from "@/contracts/ai";
+import { mockExplainRecommendation } from "@/contracts/mocks";
 import { getInsurerPrerequisites } from "@/modules/catalogue";
 import { getRecommendationContext } from "@/modules/profile";
 import { evaluatePolicyEligibility } from "@/modules/recommendation";
@@ -43,6 +45,7 @@ export default async function RecommendationShell({ searchParams }: PageProps) {
           </p>
         </div>
       </header>
+      <ExplanationCard result={mockExplainRecommendation} />
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         <table className="w-full text-sm">
           <thead className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-500">
