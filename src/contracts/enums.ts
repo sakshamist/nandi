@@ -40,6 +40,12 @@ export const LivestockIdStatus = {
 } as const;
 export type LivestockIdStatus = (typeof LivestockIdStatus)[keyof typeof LivestockIdStatus];
 
+export const ReferralDecision = {
+  Accepted: "accepted",
+  Declined: "declined",
+} as const;
+export type ReferralDecision = (typeof ReferralDecision)[keyof typeof ReferralDecision];
+
 export const ChecklistItemStatus = {
   Required: "required",
   Conditional: "conditional",

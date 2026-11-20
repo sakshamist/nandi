@@ -5,6 +5,7 @@ import type {
   EvidenceRefType,
   LivestockIdStatus,
   ReasonCode,
+  ReferralDecision,
   ValidationStatus,
 } from "./enums";
 import type {
@@ -68,6 +69,8 @@ export interface ConversationalInput {
   messageText: string;
   languageCode: string;
   idempotencyKey: string;
+  idStatus?: LivestockIdStatus;
+  referralDecision?: ReferralDecision;
 }
 
 export interface NextQuestionInput {
@@ -75,6 +78,7 @@ export interface NextQuestionInput {
   customerType?: CustomerType;
   missingFacts: string[];
   idStatus?: LivestockIdStatus;
+  referralDecision?: ReferralDecision;
 }
 
 export interface NextQuestionResult {
