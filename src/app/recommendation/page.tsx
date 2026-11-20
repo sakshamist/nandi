@@ -99,3 +99,6 @@ export default async function RecommendationShell({ searchParams }: PageProps) {
     </main>
   );
 }
+
+
+export const instant = false;

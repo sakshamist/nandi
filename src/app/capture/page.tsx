@@ -54,3 +54,6 @@ export default async function CaptureShell() {
     </main>
   );
 }
+
+
+export const instant = false;

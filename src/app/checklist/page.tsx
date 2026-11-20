@@ -66,3 +66,6 @@ export default async function ChecklistTracker() {
     </main>
   );
 }
+
+
+export const instant = false;
