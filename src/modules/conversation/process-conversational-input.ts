@@ -19,6 +19,8 @@ export const processConversationalInput: ProcessConversationalInput = async (inp
     interactionId: input.interactionId,
     customerType,
     missingFacts,
+    idStatus: input.idStatus,
+    referralDecision: input.referralDecision,
   });
   const evidence = {
     type: SourceEvidenceType.ConversationTurn,

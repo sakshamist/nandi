@@ -1,9 +1,15 @@
 import { LivestockIdStatus } from "@/contracts";
-import type { GetNextQuestion } from "@/contracts";
+import type { GetNextQuestion, NextQuestionInput } from "@/contracts";
 import { mockEarlyIdPrompt } from "@/contracts/mocks";
 
+export function shouldPromptForEarlyId(input: NextQuestionInput): boolean {
+  const needsIdCheck = input.idStatus === LivestockIdStatus.Absent
+    || input.idStatus === LivestockIdStatus.Unknown;
+  return needsIdCheck && input.referralDecision === undefined;
+}
+
 export const getNextQuestion: GetNextQuestion = async (input) => {
-  if (input.idStatus === LivestockIdStatus.Absent || input.idStatus === LivestockIdStatus.Unknown) {
+  if (shouldPromptForEarlyId(input)) {
     return {
       question: mockEarlyIdPrompt.question,
       purpose: "EARLY_ID",
