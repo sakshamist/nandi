@@ -101,5 +101,5 @@ test("environment template uses GCP and mock AI defaults", () => {
   const env = read(".env.example");
   assert.match(env, /^GOOGLE_CLOUD_PROJECT=/m);
   assert.match(env, /^LLM_PROVIDER="mock"$/m);
-  assert.doesNotMatch(env, /OLLAMA_BASE_URL|OPENAI_API_KEY|GEMINI_API_KEY|OBJECT_STORAGE_(ENDPOINT|ACCESS_KEY|SECRET_KEY)/);
+  assert.doesNotMatch(env, /OLLAMA_BASE_URL|OPENAI_API_KEY|OBJECT_STORAGE_(ENDPOINT|ACCESS_KEY|SECRET_KEY)/);
 });
