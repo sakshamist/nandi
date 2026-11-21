@@ -1,5 +1,6 @@
 export * from "./embeddings";
 export * from "./events";
+export * from "./gemini-provider";
 export * from "./hybrid-retrieval";
 export * from "./reranker";
 export * from "./ingestion";
