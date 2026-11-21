@@ -12,7 +12,7 @@ until docker-compose exec -T postgres pg_isready -U nandi -d nandi >/dev/null 2>
 done
 
 echo "Applying database migrations..."
-docker-compose exec -T app ./node_modules/.bin/prisma migrate deploy
+docker-compose exec -T -e HOME=/tmp app npx prisma@6 migrate deploy
 
 echo "Seeding baseline data..."
 docker-compose exec -T app npm run db:seed

@@ -21,8 +21,10 @@ ENV PORT=8080
 ENV HOSTNAME=0.0.0.0
 
 RUN groupadd -r nextjs && useradd -r -g nextjs nextjs
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
