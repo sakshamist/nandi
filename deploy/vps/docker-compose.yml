@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: nandi
+      POSTGRES_PASSWORD: nandi
+      POSTGRES_DB: nandi
+    volumes:
+      - nandi_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nandi -d nandi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.20.2
+    volumes:
+      - nandi_qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://nandi:nandi@postgres:5432/nandi?schema=public
+      DIRECT_URL: postgresql://nandi:nandi@postgres:5432/nandi?schema=public
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ""
+      QDRANT_COLLECTION: surelm_product_knowledge
+      LLM_PROVIDER: mock
+      FEATURE_AI_EXPLANATIONS: "false"
+      FEATURE_AI_EVIDENCE: "false"
+      FEATURE_HYBRID_SEARCH: "false"
+      RERANKER_PROVIDER: mock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  nandi_postgres_data:
+  nandi_qdrant_data:
+  caddy_data:
+  caddy_config:
