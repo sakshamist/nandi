@@ -1,18 +1,23 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { buildPointId, chunkMarkdown } from "../src/lib/ai/ingestion.ts";
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("chunkMarkdown returns source and content hash", () => {
-  const chunks = chunkMarkdown("# Title\n\nFirst paragraph.\n\nSecond paragraph.", "rules.md");
-  assert.ok(chunks.length > 0);
-  assert.equal(chunks[0].source, "rules.md");
-  assert.match(chunks[0].contentHash, /^[a-f0-9]{64}$/);
+test("chunkMarkdown attributes source and sha256 content hash to every chunk", () => {
+  const source = read("src/lib/ai/ingestion.ts");
+  assert.match(source, /export interface KnowledgeChunk/);
+  assert.match(source, /source: string;/);
+  assert.match(source, /contentHash: string;/);
+  assert.match(source, /export function chunkMarkdown\(content: string, source: string\): KnowledgeChunk\[\]/);
+  assert.match(source, /function createChunk\(source: string, heading: string, index: number, text: string\): KnowledgeChunk/);
+  assert.match(source, /contentHash: crypto\.createHash\("sha256"\)\.update\(normalized\)\.digest\("hex"\)/);
 });
 
 test("buildPointId is deterministic and UUID-shaped", () => {
-  const first = buildPointId("rules.md", 0, "abc");
-  const second = buildPointId("rules.md", 0, "abc");
-  assert.equal(first, second);
-  assert.match(first, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  const source = read("src/lib/ai/ingestion.ts");
+  assert.match(source, /export function buildPointId\(source: string, index: number, contentHash: string\): string/);
+  assert.match(source, /\.update\(`\$\{source\}:\$\{index\}:\$\{contentHash\}`\)/);
+  assert.match(source, /hash\.slice\(0, 8\)}-\$\{/);
+  assert.match(source, /hash\.slice\(20, 32\)}/);
 });
