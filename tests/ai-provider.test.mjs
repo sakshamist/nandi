@@ -25,3 +25,13 @@ test("gemini provider calls generateContent and parses JSON with fallback", () =
   assert.match(gemini, /createEnvelope/);
   assert.match(gemini, /modelVersion: options\.model/);
 });
+
+test("gemini defaults to flash-latest model", () => {
+  const provider = read("src/lib/ai/provider.ts");
+  const bootstrap = read("scripts/cloud-shell-bootstrap.sh");
+  const env = read(".env.example");
+  assert.match(provider, /GEMINI_MODEL \?\? "gemini-flash-latest"/);
+  assert.match(bootstrap, /Gemini model \[gemini-flash-latest\]/);
+  assert.match(bootstrap, /GEMINI_MODEL="\$\{GEMINI_MODEL:-gemini-flash-latest\}"/);
+  assert.match(env, /GEMINI_MODEL="gemini-flash-latest"/);
+});

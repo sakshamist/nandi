@@ -45,14 +45,15 @@ test("recommendation comparison shell lists policies with insurer requirements a
   assert.match(page, /Recommended policies/);
   assert.match(page, /requiresTagForSubmission \? "Tag required before submission" : null/);
   assert.match(page, /missingFacts\.join\(", "\)/);
-  assert.match(page, /getInsurerPrerequisites\(product\.id\)/);
-  assert.match(page, /evaluatePolicyEligibility\(\{ productId: product\.id, context \}\)/);
+  assert.match(page, /getInsurerPrerequisites\(policy\.productId\)/);
+  assert.match(page, /rankPolicies\(context\)/);
 });
 
 test("policy comparison mounts Developer 1's explanation card", () => {
   const page = read("src/app/recommendation/page.tsx");
   assert.match(page, /ExplanationCard/);
-  assert.match(page, /result=\{mockExplainRecommendation\}/);
+  assert.match(page, /explainRecommendation/);
+  assert.match(page, /result=\{explanation\}/);
 
   const card = read("src/components/ai/explanation-card.tsx");
   assert.match(card, /ExplanationResult/);

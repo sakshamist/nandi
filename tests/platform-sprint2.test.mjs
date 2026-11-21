@@ -38,9 +38,14 @@ test("getRecommendationContext returns verified facts only, from ProfileFacts an
 
 test("workspace mounts the AI fact review panel wired to confirmation", () => {
   const page = read("src/app/page.tsx");
-  assert.match(page, /FactReviewPanel/);
-  assert.match(page, /mockProposeProfileFacts/);
-  assert.match(page, /confirmProposedFact/);
+  assert.match(page, /proposeProfileFacts/);
+  assert.match(page, /ensureFactReviewInteraction/);
+  assert.match(page, /WorkspaceShell/);
+
+  const shell = read("src/components/workspace/workspace-shell.tsx");
+  assert.match(shell, /"use client"/);
+  assert.match(shell, /FactReviewPanel/);
+  assert.match(shell, /confirmProposedFact/);
 
   const actions = read("src/modules/profile/fact-review-actions.ts");
   assert.match(actions, /"use server"/);

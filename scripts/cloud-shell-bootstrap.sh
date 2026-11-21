@@ -68,8 +68,8 @@ if [[ -z "$GEMINI_API_KEY" ]]; then
   exit 1
 fi
 
-read -rp 'Gemini model [gemini-2.0-flash]: ' GEMINI_MODEL
-GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.0-flash}"
+read -rp 'Gemini model [gemini-flash-latest]: ' GEMINI_MODEL
+GEMINI_MODEL="${GEMINI_MODEL:-gemini-flash-latest}"
 
 if ! gcloud storage buckets describe "gs://${GCS_BUCKET}" --project="$PROJECT_ID" >/dev/null 2>&1; then
   gcloud storage buckets create "gs://${GCS_BUCKET}" --project="$PROJECT_ID" --location="$REGION" --uniform-bucket-level-access

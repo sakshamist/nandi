@@ -73,8 +73,8 @@ test("capture mounts the AI evidence exception review wired to validation routin
   const page = read("src/app/capture/page.tsx");
   assert.match(page, /EvidenceExceptionReview/);
   assert.match(page, /mockEvidenceRequirements/);
-  assert.match(page, /mockAssessEvidenceQuality/);
-  assert.match(page, /mockExtractVhcFields/);
+  assert.match(page, /assessEvidenceQuality/);
+  assert.match(page, /extractVhcFields/);
 
   const wrapper = read("src/components/capture/evidence-exception-review.tsx");
   assert.match(wrapper, /"use client"/);

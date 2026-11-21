@@ -54,12 +54,12 @@ test("offline detector reports online/offline and supports subscriptions", () =>
 });
 
 test("workspace shell shows the offline banner and local-draft sync indicator", () => {
-  const page = read("src/app/page.tsx");
-  assert.match(page, /"use client"/);
-  assert.match(page, /Drafts saved locally/);
-  assert.match(page, /You are offline/);
-  assert.match(page, /subscribeOffline/);
-  assert.match(page, /Workspace sections/);
+  const shell = read("src/components/workspace/workspace-shell.tsx");
+  assert.match(shell, /"use client"/);
+  assert.match(shell, /Drafts saved locally/);
+  assert.match(shell, /You are offline/);
+  assert.match(shell, /subscribeOffline/);
+  assert.match(shell, /Workspace sections/);
 });
 
 test("event bus is the single in-process emitter hub with name filtering", () => {

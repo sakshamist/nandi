@@ -59,9 +59,9 @@ test("referral status is exposed to the workspace shell as a server action", () 
 });
 
 test("workspace shell renders the referral indicator", () => {
-  const page = read("src/app/page.tsx");
-  assert.match(page, /import ReferralStatus from "@\/components\/referral-status"/);
-  assert.match(page, /<ReferralStatus \/>/);
+  const shell = read("src/components/workspace/workspace-shell.tsx");
+  assert.match(shell, /import ReferralStatus from "@\/components\/referral-status"/);
+  assert.match(shell, /<ReferralStatus \/>/);
 });
 
 test("seeds cover the institute directory", () => {
