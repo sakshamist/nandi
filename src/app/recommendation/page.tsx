@@ -1,4 +1,6 @@
 import { connection } from "next/server";
+
+export const instant = false;
 import { ExplanationCard } from "@/components/ai/explanation-card";
 import { ConfidenceBand, CustomerType, SourceEvidenceType, VerificationState } from "@/contracts";
 import type { ExplanationResult, RecommendationContext } from "@/contracts/ai";
