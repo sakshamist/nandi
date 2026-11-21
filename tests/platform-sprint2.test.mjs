@@ -35,3 +35,17 @@ test("getRecommendationContext returns verified facts only, from ProfileFacts an
   assert.match(block, /livestock/);
   assert.match(block, /customerType/);
 });
+
+test("workspace mounts the AI fact review panel wired to confirmation", () => {
+  const page = read("src/app/page.tsx");
+  assert.match(page, /FactReviewPanel/);
+  assert.match(page, /mockProposeProfileFacts/);
+  assert.match(page, /confirmProposedFact/);
+
+  const actions = read("src/modules/profile/fact-review-actions.ts");
+  assert.match(actions, /"use server"/);
+  assert.match(actions, /persistProfileFactProposal/);
+  assert.match(actions, /confirmProfileFact\(\{/);
+  assert.match(actions, /VerificationState\.AgentConfirmed/);
+  assert.match(actions, /interactionService\.startInteraction/);
+});

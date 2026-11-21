@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FactReviewPanel } from "@/components/ai/fact-review-panel";
 import ReferralStatus from "@/components/referral-status";
+import { mockProposeProfileFacts } from "@/contracts/mocks";
+import { confirmProposedFact } from "@/modules/profile/fact-review-actions";
 import { drafts, isOnline, subscribeOffline } from "@/modules/workspace";
 
 const SECTIONS = [
@@ -15,6 +18,28 @@ const SECTIONS = [
 export default function WorkspaceShell() {
   const [offline, setOffline] = useState(() => !isOnline());
   const [pendingDrafts, setPendingDrafts] = useState<number | null>(null);
+  const [proposals, setProposals] = useState(mockProposeProfileFacts);
+
+  function proposalIndex(factId: string): number {
+    return Number(factId.split(":").at(-1));
+  }
+
+  async function handleConfirmFact(factId: string, value: string) {
+    const index = proposalIndex(factId);
+    const proposal = proposals[index];
+    if (!proposal) {
+      return;
+    }
+    const result = await confirmProposedFact({ proposal, value });
+    if (result.ok) {
+      setProposals((current) => current.filter((_, position) => position !== index));
+    }
+  }
+
+  function handleRejectFact(factId: string) {
+    const index = proposalIndex(factId);
+    setProposals((current) => current.filter((_, position) => position !== index));
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +104,15 @@ export default function WorkspaceShell() {
                 {offline ? "Ready for offline work" : "Synced"}
               </span>
             </div>
+            {section.id === "conversation" ? (
+              <div className="mt-4">
+                <FactReviewPanel
+                  proposals={proposals}
+                  onConfirm={handleConfirmFact}
+                  onReject={handleRejectFact}
+                />
+              </div>
+            ) : null}
           </article>
         ))}
       </section>

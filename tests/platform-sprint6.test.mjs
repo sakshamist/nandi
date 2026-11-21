@@ -68,3 +68,21 @@ test("documents module barrel re-exports the service and capture seam", () => {
   assert.match(barrel, /export \* from "\.\/documents"/);
   assert.match(barrel, /export \* from "\.\/capture"/);
 });
+
+test("capture mounts the AI evidence exception review wired to validation routing", () => {
+  const page = read("src/app/capture/page.tsx");
+  assert.match(page, /EvidenceExceptionReview/);
+  assert.match(page, /mockEvidenceRequirements/);
+  assert.match(page, /mockAssessEvidenceQuality/);
+  assert.match(page, /mockExtractVhcFields/);
+
+  const wrapper = read("src/components/capture/evidence-exception-review.tsx");
+  assert.match(wrapper, /"use client"/);
+  assert.match(wrapper, /confirmEvidenceForValidation/);
+
+  const actions = read("src/modules/checklist/evidence-review-actions.ts");
+  assert.match(actions, /"use server"/);
+  assert.match(actions, /recordEvidenceValidation\(\{/);
+  assert.match(actions, /EvidenceRefType\.Photo/);
+  assert.match(actions, /idempotencyKey/);
+});
