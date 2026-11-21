@@ -61,6 +61,16 @@ QDRANT_URL="${QDRANT_URL%/}"
 read -rp "GCS bucket name [${PROJECT_ID}-nandi-uploads]: " GCS_BUCKET
 GCS_BUCKET="${GCS_BUCKET:-${PROJECT_ID}-nandi-uploads}"
 
+read -rsp 'Gemini API key: ' GEMINI_API_KEY
+printf '\n'
+if [[ -z "$GEMINI_API_KEY" ]]; then
+  printf 'Gemini API key is required.\n' >&2
+  exit 1
+fi
+
+read -rp 'Gemini model [gemini-2.0-flash]: ' GEMINI_MODEL
+GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.0-flash}"
+
 if ! gcloud storage buckets describe "gs://${GCS_BUCKET}" --project="$PROJECT_ID" >/dev/null 2>&1; then
   gcloud storage buckets create "gs://${GCS_BUCKET}" --project="$PROJECT_ID" --location="$REGION" --uniform-bucket-level-access
 fi
@@ -105,6 +115,7 @@ create_secret nandi-direct-url "$DIRECT_URL"
 create_secret nandi-qdrant-url "$QDRANT_URL"
 create_secret nandi-qdrant-api-key "$QDRANT_API_KEY"
 create_secret nandi-gcs-bucket "$GCS_BUCKET"
+create_secret nandi-gemini-api-key "$GEMINI_API_KEY"
 
 curl -fsS -X PUT \
   "${QDRANT_URL}/collections/surelm_product_knowledge" \
@@ -154,8 +165,8 @@ gcloud run deploy nandi \
   --image="$IMAGE" \
   --service-account="$SA_EMAIL" \
   --add-cloudsql-instances="$INSTANCE_CONNECTION_NAME" \
-  --set-secrets="DATABASE_URL=nandi-db-url:latest,DIRECT_URL=nandi-direct-url:latest,QDRANT_URL=nandi-qdrant-url:latest,QDRANT_API_KEY=nandi-qdrant-api-key:latest,GCS_BUCKET=nandi-gcs-bucket:latest" \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_REGION=${REGION},VERTEX_AI_LOCATION=${REGION},GCS_PROJECT_ID=${PROJECT_ID},QDRANT_COLLECTION=surelm_product_knowledge,SIGNED_URL_TTL_SECONDS=900,LLM_PROVIDER=mock,FEATURE_AI_EXPLANATIONS=false,FEATURE_AI_EVIDENCE=false" \
+  --set-secrets="DATABASE_URL=nandi-db-url:latest,DIRECT_URL=nandi-direct-url:latest,QDRANT_URL=nandi-qdrant-url:latest,QDRANT_API_KEY=nandi-qdrant-api-key:latest,GCS_BUCKET=nandi-gcs-bucket:latest,GEMINI_API_KEY=nandi-gemini-api-key:latest" \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_REGION=${REGION},VERTEX_AI_LOCATION=${REGION},GCS_PROJECT_ID=${PROJECT_ID},QDRANT_COLLECTION=surelm_product_knowledge,SIGNED_URL_TTL_SECONDS=900,LLM_PROVIDER=gemini,GEMINI_MODEL=${GEMINI_MODEL},FEATURE_AI_EXPLANATIONS=true,FEATURE_AI_EVIDENCE=true" \
   --min=0 \
   --max=1 \
   --port=8080 \
