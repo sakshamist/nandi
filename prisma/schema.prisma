@@ -528,6 +528,7 @@ model Application {
   submissionEligible   Boolean          @default(false)
   issuanceEligible     Boolean          @default(false)
   submissionMode       SubmissionMode   @default(MANUAL_HANDOFF)
+  declarationsJson     String?
   externalPolicyNumber String?
   externalReferenceId  String?
   submittedAt          DateTime?

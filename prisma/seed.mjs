@@ -39,6 +39,37 @@ async function main() {
     serviceAreaSummary: "Seeded referral destination for pilots",
   });
 
+  for (const institute of [
+    {
+      name: "GVI - PB-01 Bhuvanagudi",
+      contactPerson: "Mohan R. - Field Officer",
+      contactPhone: "+910000000003",
+      email: "vd.pb01@surelm.local",
+      district: "Sample District",
+      state: "PB",
+      serviceAreaSummary: "Tagging and RFID ear-tag services for PB-01 villages",
+    },
+    {
+      name: "GVDS - PB-02 Murtijapur",
+      contactPerson: "Sunita K. - Field Officer",
+      contactPhone: "+910000000004",
+      email: "vd.pb02@surelm.local",
+      district: "Sample District",
+      state: "PB",
+      serviceAreaSummary: "Ear-tag identification for PB-02 villages",
+    },
+    {
+      name: "Sambalpur District Veterinary Dispensary",
+      contactPerson: "Arjun P. - Division Officer",
+      contactPhone: "+910000000005",
+      district: "Sambalpur",
+      state: "OD",
+      serviceAreaSummary: "Division-level tagging services for eastern villages",
+    },
+  ]) {
+    await findOrCreate(prisma.institute, { name: institute.name }, institute);
+  }
+
   const livestock = await findOrCreate(
     prisma.livestockRecord,
     { customerId: customer.id, species: "CATTLE" },
