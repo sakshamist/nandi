@@ -15,7 +15,7 @@ echo "Applying database migrations..."
 docker-compose exec -T -e HOME=/tmp app npx prisma@6 migrate deploy
 
 echo "Seeding baseline data..."
-docker-compose exec -T app npm run db:seed
+docker-compose exec -T app node prisma/seed.mjs
 
 echo "Ingesting knowledge documents..."
 docker-compose exec -T app npm run docs:ingest -- --dir /app/knowledge
