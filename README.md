@@ -39,6 +39,111 @@ Do not enable Cloud SQL HA/replicas/backups, paid Cloud SQL instances, local GPU
 
 Pilot teardown: export required demo records, delete the Cloud SQL instance, Cloud Run service, Artifact Registry image, and GCS bucket, remove secrets and the service account, then reactivate or delete the Qdrant cluster.
 
+## Knowledge ingestion and hybrid search
+
+Use this workflow to ingest approved product knowledge documents into Qdrant and PostgreSQL, then enable hybrid retrieval.
+
+### 1. Prepare the environment
+
+```bash
+npm ci
+cp .env.example .env
+```
+
+Set at least:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/nandi?schema=public"
+DIRECT_URL="postgresql://USER:PASSWORD@HOST:5432/nandi?schema=public"
+QDRANT_URL="http://localhost:6333"
+QDRANT_API_KEY=""
+QDRANT_COLLECTION="surelm_product_knowledge"
+```
+
+Optional hybrid-search and reranking settings:
+
+```env
+FEATURE_HYBRID_SEARCH="false"
+RERANKER_PROVIDER="mock"
+GCP_PROJECT_ID=""
+GCP_LOCATION="global"
+VERTEX_RANKER_MODEL="semantic-ranker-fast@latest"
+```
+
+### 2. Start PostgreSQL and Qdrant
+
+Start PostgreSQL with the pilot Cloud SQL instance or a local PostgreSQL service. Start Qdrant locally or use Qdrant Cloud Free, then verify:
+
+```bash
+curl http://localhost:6333/collections
+```
+
+### 3. Apply database migrations and seed data
+
+```bash
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+```
+
+### 4. Prepare source documents
+
+Place approved Markdown files in a folder. PDF brochures must be converted to Markdown before ingestion. Example:
+
+```bash
+mkdir -p /path/to/knowledge
+```
+
+### 5. Preview ingestion
+
+```bash
+npm run docs:ingest:dry-run -- --dir /path/to/knowledge
+```
+
+### 6. Run ingestion
+
+```bash
+npm run docs:ingest -- --dir /path/to/knowledge
+```
+
+Optional limit:
+
+```bash
+npm run docs:ingest -- --dir /path/to/knowledge --limit 100
+```
+
+This creates Qdrant vectors and PostgreSQL `KnowledgeDocument` / `KnowledgeChunk` records. The PostgreSQL chunks include a generated `tsvector` column for full-text search.
+
+### 7. Enable hybrid search
+
+Set:
+
+```env
+FEATURE_HYBRID_SEARCH="true"
+```
+
+For Vertex AI reranking, also set:
+
+```env
+RERANKER_PROVIDER="vertex"
+GCP_PROJECT_ID="your-gcp-project-id"
+```
+
+Authenticate locally with:
+
+```bash
+gcloud auth application-default login
+```
+
+### 8. Verify ingestion
+
+```bash
+curl http://localhost:6333/collections/surelm_product_knowledge
+psql "$DATABASE_URL" -c 'SELECT COUNT(*) FROM "KnowledgeChunk";'
+```
+
+Expected result: matching chunk counts in Qdrant and PostgreSQL.
+
 ## Scripts
 
 | Script | Purpose |
