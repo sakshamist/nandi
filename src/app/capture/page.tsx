@@ -1,6 +1,12 @@
 import type { EvidenceCategory } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import EvidenceExceptionReview from "@/components/capture/evidence-exception-review";
 import PhotoCaptureForm from "@/components/capture/photo-capture-form";
+import {
+  mockAssessEvidenceQuality,
+  mockEvidenceRequirements,
+  mockExtractVhcFields,
+} from "@/contracts/mocks";
+import { prisma } from "@/lib/prisma";
 
 const PHOTO_CATEGORIES: EvidenceCategory[] = [
   "ANIMAL_FULL_BODY_PHOTO",
@@ -51,6 +57,11 @@ export default async function CaptureShell() {
           </article>
         ))}
       </div>
+      <EvidenceExceptionReview
+        requirements={mockEvidenceRequirements}
+        quality={mockAssessEvidenceQuality}
+        vhc={mockExtractVhcFields}
+      />
     </main>
   );
 }
