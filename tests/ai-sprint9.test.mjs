@@ -95,3 +95,41 @@ test("sprint-specific AI regression guards are present", () => {
   const evidence = read("tests/ai-sprint6.test.mjs");
   assert.match(evidence, /LowConfidenceReviewRequired/);
 });
+
+test("confidence thresholds route low-quality output to review, never final status", () => {
+  const quality = read("src/modules/documents/ai/assess-evidence-quality.ts");
+  assert.match(quality, /FAILURE_THRESHOLD/);
+  assert.match(quality, /REVIEW_THRESHOLD/);
+  assert.match(quality, /ReasonCode\.LowConfidenceReviewRequired/);
+
+  const vhc = read("src/modules/documents/ai/extract-vhc-fields.ts");
+  assert.match(vhc, /LOW_CONFIDENCE_THRESHOLD/);
+  assert.match(vhc, /bandToScore/);
+  assert.match(vhc, /ConfidenceBand/);
+  assert.match(vhc, /ReasonCode\.LowConfidenceReviewRequired/);
+});
+
+test("exception review surfaces simulated low-confidence and quality failures", () => {
+  const review = read("src/components/ai/evidence-exception-review.tsx");
+  assert.match(review, /quality\?\.reasonCodes/);
+  assert.match(review, /vhc\?\.reasonCodes/);
+  assert.match(review, /Low-confidence or failed validation requires agent review/);
+  assert.match(review, /Reason codes/);
+  assert.match(review, /onRetake/);
+  assert.match(review, /onConfirm/);
+  assert.match(review, /onReject/);
+});
+
+test("AI-owned E2E steps are wired: inference, early-ID prompt, no-repeat", () => {
+  const process = read("src/modules/conversation/process-conversational-input.ts");
+  assert.match(process, /inferCustomerType/);
+  assert.match(process, /proposeProfileFacts/);
+
+  const infer = read("src/modules/conversation/infer-customer-type.ts");
+  assert.match(infer, /CustomerType\.Cooperative/);
+
+  const nextQuestion = read("src/modules/conversation/get-next-question.ts");
+  assert.match(nextQuestion, /shouldPromptForEarlyId/);
+  assert.match(nextQuestion, /input\.referralDecision === undefined/);
+  assert.match(nextQuestion, /purpose: "EARLY_ID"/);
+});
